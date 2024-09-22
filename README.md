@@ -21,10 +21,6 @@ WanderLust is a simple MERN travel blog website ✈ This project is aimed to hel
 - OWASP (Dependency check)
 - SonarQube (Quality)
 - Trivy (Filesystem Scan)
-- ArgoCD (CD)
-- Redis (Caching)
-- AWS EKS (Kubernetes)
-- Helm (Monitoring using grafana and prometheus)
 
 ### How pipeline will look after deployment:
 - <b>CI pipeline to build and push</b>
@@ -33,23 +29,17 @@ WanderLust is a simple MERN travel blog website ✈ This project is aimed to hel
 - <b>CD pipeline to update application version</b>
 ![image](https://github.com/user-attachments/assets/8fd13807-622e-45f7-af23-dcc1ba30ca5d)
 
-- <b>ArgoCD application for deployment on EKS</b>
-![image](https://github.com/user-attachments/assets/1ea9d486-656e-40f1-804d-2651efb54cf6)
-
 #
 > [!Important]
 > Below table helps you to navigate to the particular tool installation section fast.
 
 | Tech stack    | Installation |
 | -------- | ------- |
-| Jenkins Master | <a href="#Jenkins">Install and configure Jenkins</a>     |
-| eksctl | <a href="#EKS">Install eksctl</a>     |
-| Argocd | <a href="#Argo">Install and configure ArgoCD</a>     |
+| Jenkins Master | <a href="#Jenkins">Install and configure Jenkins</a>     
 | Jenkins-Worker Setup | <a href="#Jenkins-worker">Install and configure Jenkins Worker Node</a>     |
 | OWASP setup | <a href="#Owasp">Install and configure OWASP</a>     |
 | SonarQube | <a href="#Sonar">Install and configure SonarQube</a>     |
 | Email Notification Setup | <a href="#Mail">Email notification setup</a>     |
-| Monitoring | <a href="#Monitor">Prometheus and grafana setup using helm charts</a>
 | Clean Up | <a href="#Clean">Clean up</a>     |
 #
 
@@ -64,8 +54,6 @@ WanderLust is a simple MERN travel blog website ✈ This project is aimed to hel
 - <b>Open the below ports in security group of master machine and also attach same security group to Jenkins worker node (We will create worker node shortly)</b>
 ![image](https://github.com/user-attachments/assets/4e5ecd37-fe2e-4e4b-a6ba-14c7b62715a3)
 
-> [!Note]
-> We are creating this master machine because we will configure Jenkins master, eksctl, EKS cluster creation from here.
 
 Install & Configure Docker by using below command, "NewGrp docker" will refresh the group config hence no need to restart the EC2 machine.
 
@@ -94,59 +82,7 @@ sudo apt-get install jenkins -y
 ```
 - <b>Now, access Jenkins Master on the browser on port 8080 and configure it</b>.
 #
-- <b id="EKS">Create EKS Cluster on AWS (Master machine)</b>
-  - IAM user with **access keys and secret access keys**
-  - AWSCLI should be configured (<a href="https://github.com/DevMadhup/DevOps-Tools-Installations/blob/main/AWSCLI/AWSCLI.sh">Setup AWSCLI</a>)
-  ```bash
-  curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-  sudo apt install unzip
-  unzip awscliv2.zip
-  sudo ./aws/install
-  aws configure
-  ```
 
-  - Install **kubectl** (Master machine)(<a href="https://github.com/DevMadhup/DevOps-Tools-Installations/blob/main/Kubectl/Kubectl.sh">Setup kubectl </a>)
-  ```bash
-  curl -o kubectl https://amazon-eks.s3.us-west-2.amazonaws.com/1.19.6/2021-01-05/bin/linux/amd64/kubectl
-  chmod +x ./kubectl
-  sudo mv ./kubectl /usr/local/bin
-  kubectl version --short --client
-  ```
-
-  - Install **eksctl** (Master machine) (<a href="https://github.com/DevMadhup/DevOps-Tools-Installations/blob/main/eksctl%20/eksctl.sh">Setup eksctl</a>)
-  ```bash
-  curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
-  sudo mv /tmp/eksctl /usr/local/bin
-  eksctl version
-  ```
-  
-  - <b>Create EKS Cluster (Master machine)</b>
-  ```bash
-  eksctl create cluster --name=wanderlust \
-                      --region=us-east-2 \
-                      --version=1.30 \
-                      --without-nodegroup
-  ```
-  - <b>Associate IAM OIDC Provider (Master machine)</b>
-  ```bash
-  eksctl utils associate-iam-oidc-provider \
-    --region us-east-2 \
-    --cluster wanderlust \
-    --approve
-  ```
-  - <b>Create Nodegroup (Master machine)</b>
-  ```bash
-  eksctl create nodegroup --cluster=wanderlust \
-                       --region=us-east-2 \
-                       --name=wanderlust \
-                       --node-type=t2.large \
-                       --nodes=2 \
-                       --nodes-min=2 \
-                       --nodes-max=2 \
-                       --node-volume-size=29 \
-                       --ssh-access \
-                       --ssh-public-key=eks-nodegroup-key 
-  ```
 > [!Note]
 >  Make sure the ssh-public-key "eks-nodegroup-key is available in your aws account"
 #
@@ -359,170 +295,5 @@ sudo apt-get install trivy -y
 chmod 777 /var/run/docker.sock
 ```
 ![image](https://github.com/user-attachments/assets/e231c62a-7adb-4335-b67e-480758713dbf)
-#
-- <b> Go to Master Machine and add our own eks cluster to argocd for application deployment using cli</b>
-  - <b>Login to argoCD from CLI</b>
-  ```bash
-   argocd login 52.53.156.187:32738 --username admin
-  ```
-> [!Tip]
-> 52.53.156.187:32738 --> This should be your argocd url
-
-  ![image](https://github.com/user-attachments/assets/7d05e5ca-1a16-4054-a321-b99270ca0bf9)
-
-  - <b>Check how many clusters are available in argocd </b>
-  ```bash
-  argocd cluster list
-  ```
-  ![image](https://github.com/user-attachments/assets/76fe7a45-e05c-422d-9652-bdaee02d630f)
-  - <b>Get your cluster name</b>
-  ```bash
-  kubectl config get-contexts
-  ```
-  ![image](https://github.com/user-attachments/assets/4cab99aa-cef3-45f6-9150-05004c2f09f8)
-  - <b>Add your cluster to argocd</b>
-  ```bash
-  argocd cluster add Wanderlust@wanderlust.us-west-1.eksctl.io --name wanderlust-eks-cluster
-  ```
-  > [!Tip]
-  > Wanderlust@wanderlust.us-west-1.eksctl.io --> This should be your EKS Cluster Name.
-
-  ![image](https://github.com/user-attachments/assets/0f36aafd-bab9-4ef8-ba5d-3eb56d850604)
-  - <b> Once your cluster is added to argocd, go to argocd console <mark>Settings --> Clusters</mark> and verify it</b>
-  ![image](https://github.com/user-attachments/assets/4490b632-19fd-4499-a341-fabf8488d13c)
-#
-- <b>Go to <mark>Settings --> Repositories</mark> and click on <mark>Connect repo</mark> </b>
-![image](https://github.com/user-attachments/assets/cc8728e5-546b-4c46-bd4c-538f4cd6a63d)
-![image](https://github.com/user-attachments/assets/eb3646e2-db84-4439-a11a-d4168080d9cc)
-![image](https://github.com/user-attachments/assets/a07f8703-5ef3-4524-aaa7-39a139335eb7)
-> [!Note]
-> Connection should be successful
-
-- <b>Now, go to <mark>Applications</mark> and click on <mark>New App</mark></b>
-
-![image](https://github.com/user-attachments/assets/ec2d7a51-d78f-4947-a90b-258944ad59a2)
-
-> [!Important]
-> Make sure to click on the <mark>Auto-Create Namespace</mark> option while creating argocd application
-
-![image](https://github.com/user-attachments/assets/55dcd3c2-5424-4efb-9bee-1c12bbf7f158)
-![image](https://github.com/user-attachments/assets/3e2468ff-8cb2-4bda-a8cc-0742cd6d0cae)
-
-- <b>Congratulations, your application is deployed on AWS EKS Cluster</b>
-![image](https://github.com/user-attachments/assets/bc2d9680-fe00-49f9-81bf-93c5595c20cc)
-![image](https://github.com/user-attachments/assets/1ea9d486-656e-40f1-804d-2651efb54cf6)
-- <b>Open port 31000 and 31100 on worker node and Access it on browser</b>
-```bash
-<worker-public-ip>:31000
-```
-![image](https://github.com/user-attachments/assets/a4b2a4b4-e1aa-4b22-ac6b-f40003d0723a)
-![image](https://github.com/user-attachments/assets/06f9f1c8-094d-4d9f-a9d8-256fb18a9ae4)
-![image](https://github.com/user-attachments/assets/64394f90-8610-44c0-9f63-c3a21eb78f55)
-- <b>Email Notification</b>
-![image](https://github.com/user-attachments/assets/0ab1ef47-f939-4618-8651-6aa9274721f4)
-
-#
-## How to monitor EKS cluster, kubernetes components and workloads using prometheus and grafana via HELM (On Master machine)
-- <p id="Monitor">Install Helm Chart</p>
-```bash
-curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
-```
-```bash
-chmod 700 get_helm.sh
-```
-```bash
-./get_helm.sh
-```
-
-#
--  Add Helm Stable Charts for Your Local Client
-```bash
-helm repo add stable https://charts.helm.sh/stable
-```
-
-#
-- Add Prometheus Helm Repository
-```bash
-helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-```
-
-#
-- Create Prometheus Namespace
-```bash
-kubectl create namespace prometheus
-```
-```bash
-kubectl get ns
-```
-
-#
-- Install Prometheus using Helm
-```bash
-helm install stable prometheus-community/kube-prometheus-stack -n prometheus
-```
-
-#
-- Verify prometheus installation
-```bash
-kubectl get pods -n prometheus
-```
-
-#
-- Check the services file (svc) of the Prometheus
-```bash
-kubectl get svc -n prometheus
-```
-
-#
-- Expose Prometheus and Grafana to the external world through Node Port
-> [!Important]
-> change it from Cluster IP to NodePort after changing make sure you save the file and open the assigned nodeport to the service.
-
-```bash
-kubectl edit svc stable-kube-prometheus-sta-prometheus -n prometheus
-```
-![image](https://github.com/user-attachments/assets/90f5dc11-23de-457d-bbcb-944da350152e)
-![image](https://github.com/user-attachments/assets/ed94f40f-c1f9-4f50-a340-a68594856cc7)
-
-#
-- Verify service
-```bash
-kubectl get svc -n prometheus
-```
-
-#
-- Now,let’s change the SVC file of the Grafana and expose it to the outer world
-```bash
-kubectl edit svc stable-grafana -n prometheus
-```
-![image](https://github.com/user-attachments/assets/4a2afc1f-deba-48da-831e-49a63e1a8fb6)
-
-#
-- Check grafana service
-```bash
-kubectl get svc -n prometheus
-```
-
-#
-- Get a password for grafana
-```bash
-kubectl get secret --namespace prometheus stable-grafana -o jsonpath="{.data.admin-password}" | base64 --decode ; echo
-```
-> [!Note]
-> Username: admin
-
-#
-- Now, view the Dashboard in Grafana
-![image](https://github.com/user-attachments/assets/d2e7ff2f-059d-48c4-92bb-9711943819c4)
-![image](https://github.com/user-attachments/assets/3d6652d0-7795-4fe9-8919-f33eac88db73)
-![image](https://github.com/user-attachments/assets/13321ee5-5d7b-4976-b409-25d3b865a42a)
-![image](https://github.com/user-attachments/assets/75a22e4b-ae81-4cad-9c92-21dd90d126a8)
-
-#
-## Clean Up
-- <b id="Clean">Delete eks cluster</b>
-```bash
-eksctl delete cluster --name=wanderlust --region=us-west-1
-```
 
 #
